@@ -31,7 +31,7 @@ hmacSHA384 key message =
 base64UrlEncode
   :: BA.Bytes
   -> BA.Bytes
-base64UrlEncode bin = Bae.convertToBase Bae.Base64URLUnpadded bin
+base64UrlEncode = Bae.convertToBase Bae.Base64URLUnpadded
 
 getNonce
   :: ( ByteArrayAccess msg
@@ -49,28 +49,19 @@ preAuthEncode
      , ByteArray bout
      )
   => [bin]
-  -> Either String bout
+  -> bout
 preAuthEncode pieces =
   let n = toW64 $ length pieces
       toW64 n1 = fromIntegral n1 :: Word64
-      packSize = fromIntegral $ 8 + 8 * n + (toW64 $ sum $ map BA.length pieces)
+      packSize = fromIntegral $ 8 + 8 * n + toW64 (sum $ map BA.length pieces)
       packer = do
         Bap.putStorable $ toLE n
         forM pieces $ \p -> do
           Bap.putStorable $ toLE $ toW64 $ BA.length p
           Bap.putBytes p
-  in Bap.fill packSize packer
-
-mustPreAuthEncode
-  :: ( ByteArrayAccess bin
-     , ByteArray bout
-     )
-  => [bin]
-  -> IO bout
-mustPreAuthEncode ps =
-  case preAuthEncode ps of
-    Left err -> throwIO $ PreAuthError err
-    Right b -> return b
+  in case Bap.fill packSize packer of
+       Left err -> bug $ PreAuthError err
+       Right b -> b
 
 v1LocalHeader :: BA.Bytes
 v1LocalHeader = BA.convert ("v1.local." :: ByteString)
@@ -130,7 +121,9 @@ v1Encrypt message key footerMay = do
 
   let c = BA.convert $ Cct.ctrCombine cipherKey iv message
 
-  preAuth :: BA.Bytes <- mustPreAuthEncode [h, nonce, c, maybe BA.empty BA.convert footerMay]
+      preAuth :: BA.Bytes =
+        preAuthEncode [h, nonce, c,
+                       maybe BA.empty BA.convert footerMay]
   let t = BA.convert $ hmacSHA384 authenticationKey preAuth
       nct = base64UrlEncode $ BA.concat [nonce, c, t]
   return $ case footerMay of
