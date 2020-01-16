@@ -1,0 +1,90 @@
+cabal-version:       2.0
+name:                paseto-hs
+version:             0.0.0.0
+synopsis:            See README for more info
+description:         See README for more info
+homepage:            https://github.com/donatello/paseto-hs
+bug-reports:         https://github.com/donatello/paseto-hs/issues
+license:             Apache-2.0
+license-file:        LICENSE
+author:              Aditya Manthramurthy
+maintainer:          aditya.mmy@gmail.com
+copyright:           2020 Aditya Manthramurthy
+build-type:          Simple
+extra-doc-files:     README.md
+                   , CHANGELOG.md
+tested-with:         GHC == 8.6.5
+                   , GHC == 8.8.1
+
+source-repository head
+  type:                git
+  location:            https://github.com/donatello/paseto-hs.git
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     PasetoHs
+                       Prelude
+
+  build-depends:       base-noprelude >= 4.12.0.0 && < 4.14
+                     , relude
+
+  ghc-options:         -Wall
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wcompat
+                       -Widentities
+                       -Wredundant-constraints
+                       -fhide-source-paths
+                       -Wmissing-export-lists
+                       -Wpartial-fields
+
+  default-language:    Haskell2010
+
+test-suite paseto-hs-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+
+  build-depends:       base-noprelude >= 4.12.0.0 && < 4.14
+                     , paseto-hs
+                     , relude
+
+  ghc-options:         -Wall
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wcompat
+                       -Widentities
+                       -Wredundant-constraints
+                       -fhide-source-paths
+                       -Wmissing-export-lists
+                       -Wpartial-fields
+
+  default-language:    Haskell2010
+
+benchmark paseto-hs-benchmark
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      benchmark
+  main-is:             Main.hs
+
+  build-depends:       base-noprelude >= 4.12.0.0 && < 4.14
+                     , gauge
+                     , paseto-hs
+                     , relude
+
+  ghc-options:         -Wall
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wcompat
+                       -Widentities
+                       -Wredundant-constraints
+                       -fhide-source-paths
+                       -Wmissing-export-lists
+                       -Wpartial-fields
+
+  default-language:    Haskell2010
