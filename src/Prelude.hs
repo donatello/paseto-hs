@@ -2,6 +2,22 @@
 
 module Prelude
        ( module Relude
-       ) where
+
+       , ByteArrayAccess
+       , ByteArray
+
+       , SHA384
+       , AES256
+       , Digest
+
+       , throwIO
+       )
+where
 
 import Relude
+
+import Data.ByteArray
+import Crypto.Hash
+import Crypto.Cipher.AES
+
+import Control.Exception
