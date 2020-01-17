@@ -1,5 +1,6 @@
 module Crypto.Paseto
        ( v1Encrypt
+       , v1Decrypt
        )
 where
 
@@ -12,8 +13,15 @@ import qualified Crypto.Error as Cerr
 import qualified Data.ByteArray.Pack as Bap
 import           Data.Memory.Endian (toLE)
 import qualified Data.ByteArray.Encoding as Bae
+import           Data.Char (ord)
 
 data PasetoError = PreAuthError String
+                 | FooterMismatch
+                 | InvalidHeader
+                 | DecodingErr String
+                 | AuthTagMismatch
+                 | InvalidV1LocalIV
+                 | CryptoErr Cerr.CryptoError
                  deriving (Show)
 
 instance Exception PasetoError
@@ -32,6 +40,12 @@ base64UrlEncode
   :: BA.Bytes
   -> BA.Bytes
 base64UrlEncode = Bae.convertToBase Bae.Base64URLUnpadded
+
+base64UrlDecode
+  :: BA.Bytes
+  -> Either PasetoError BA.Bytes
+base64UrlDecode b =
+  first DecodingErr $ Bae.convertFromBase Bae.Base64URLUnpadded b
 
 getNonce
   :: ( ByteArrayAccess msg
@@ -129,3 +143,63 @@ v1Encrypt message key footerMay = do
   return $ case footerMay of
     Just footer -> BA.concat [h, nct, dot, base64UrlEncode $ BA.convert footer]
     Nothing -> BA.concat [h, nct]
+
+isDot :: Word8 -> Bool
+isDot w = let o = ord '.'
+              n = fromIntegral o :: Word8
+          in n == w
+
+v1Decrypt
+  :: ( ByteArray msg
+     , ByteArrayAccess key
+     , ByteArrayAccess footer
+     , ByteArray out
+     )
+  => msg
+  -> key
+  -> Maybe footer
+  -> Either PasetoError out
+v1Decrypt message key footerMay = do
+  let (h, rest) = BA.splitAt (BA.length v1LocalHeader) message
+      (m, f') = BA.span (not . isDot) rest
+      fEncoded = BA.drop 1 f'
+
+  f <- base64UrlDecode $ BA.convert fEncoded
+
+  let
+    -- Footer check uses constant time equality check
+    footerCheck v = when (not $ BA.constEq v f) $ Left FooterMismatch
+
+  maybe (return ()) footerCheck footerMay
+
+  when (BA.convert h /= v1LocalHeader) $ Left InvalidHeader
+
+  binMsg <- base64UrlDecode $ BA.convert m
+  let (nonce, rest1) = BA.splitAt 32 binMsg
+      cipherLen = BA.length rest1 - 48
+      (cipher, tag) = BA.splitAt cipherLen rest1
+      (encryptionKey, authenticationKey) = splitKey key nonce
+
+      preAuth :: BA.Bytes =
+        preAuthEncode [BA.convert h, nonce, cipher,
+                       maybe BA.empty BA.convert footerMay]
+
+  let t2 :: BA.Bytes = BA.convert $ hmacSHA384 authenticationKey preAuth
+
+  -- Authenticate the tag
+  when (not $ BA.constEq t2 tag) $ Left AuthTagMismatch
+
+  -- Decrypt
+  let cipherR = Cct.cipherInit encryptionKey
+  cipherKey :: AES256 <- either (Left . CryptoErr) return $
+                         Cerr.eitherCryptoError cipherR
+  let encryptionNonce = BA.dropView nonce 16
+      ivMaybe :: Maybe (Cct.IV AES256) = Cct.makeIV encryptionNonce
+
+  iv <- maybe
+        (Left InvalidV1LocalIV)
+        return
+        ivMaybe
+
+  let plainText = BA.convert $ Cct.ctrCombine cipherKey iv cipher
+  return plainText
