@@ -25,6 +25,9 @@ library
   exposed-modules:     Crypto.Paseto
                        Prelude
 
+  other-modules:       Crypto.Paseto.Common
+                       Crypto.Paseto.Version1
+
   build-depends:       base-noprelude >= 4.12.0.0 && < 4.14
                      , relude
                      , cryptonite
@@ -54,6 +57,8 @@ test-suite paseto-hs-test
   build-depends:       base-noprelude >= 4.12.0.0 && < 4.14
                      , paseto-hs
                      , relude
+                     , tasty
+                     , tasty-hunit
 
   ghc-options:         -Wall
                        -threaded
@@ -69,6 +74,9 @@ test-suite paseto-hs-test
                        -Wpartial-fields
 
   default-language:    Haskell2010
+
+  default-extensions:   ScopedTypeVariables
+                      , OverloadedStrings
 
 benchmark paseto-hs-benchmark
   type:                exitcode-stdio-1.0

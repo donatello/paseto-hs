@@ -6,7 +6,7 @@ module Prelude
        , ByteArrayAccess
        , ByteArray
 
-       , SHA384
+       , SHA384(SHA384)
        , AES256
        , Digest
 
