@@ -18,7 +18,6 @@ import           Data.Memory.Endian (toLE)
 import qualified Data.ByteArray.Encoding as Bae
 import qualified Crypto.Error as Cerr
 import qualified Crypto.PubKey.RSA.Types as RsaTypes
-import           Data.Char (ord)
 
 data PasetoError = PreAuthError String
                  | FooterMismatch
